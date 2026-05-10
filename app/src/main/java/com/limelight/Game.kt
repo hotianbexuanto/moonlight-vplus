@@ -70,6 +70,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import androidx.preference.PreferenceManager
+import android.util.DisplayMetrics
 import android.util.Rational
 import android.view.Display
 import android.view.InputDevice
@@ -131,6 +132,8 @@ class Game : Activity(), SurfaceHolder.Callback,
     private var imeAvoidanceRoot: ViewGroup? = null
     private var imeAvoidanceBottomInset = 0
     private var imeAvoidancePollsRemaining = 0
+    private var imeAvoidanceExpectingKeyboard = false
+    private var imeAvoidanceUsingFallback = false
     private val imeAvoidanceBaseMargins = HashMap<Int, Int>()
     private val imeAvoidanceBaseTranslations = HashMap<Int, Float>()
     private val imeAvoidanceLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
@@ -569,9 +572,37 @@ class Game : Activity(), SurfaceHolder.Callback,
         val root = imeAvoidanceRoot ?: return
         val visibleFrame = Rect()
         root.getWindowVisibleDisplayFrame(visibleFrame)
-        val hiddenBottom = (root.rootView.height - visibleFrame.bottom).coerceAtLeast(0)
-        val keyboardVisible = hiddenBottom > root.rootView.height * 0.15f
+        val visibleFrameInset = (root.rootView.height - visibleFrame.bottom).coerceAtLeast(0)
+        val screenLocation = IntArray(2)
+        root.getLocationOnScreen(screenLocation)
+        val screenBottomInset = (getRealDisplayHeight() - (screenLocation[1] + root.height)).coerceAtLeast(0)
+        val detectedInset = maxOf(visibleFrameInset, screenBottomInset)
+
+        if (detectedInset > 0) {
+            imeAvoidanceUsingFallback = false
+        } else if (!imeAvoidanceUsingFallback) {
+            imeAvoidanceExpectingKeyboard = false
+        }
+
+        val fallbackInset = if (imeAvoidanceExpectingKeyboard &&
+            imeAvoidanceUsingFallback &&
+            detectedInset == 0
+        ) getFallbackImeInset() else 0
+
+        val hiddenBottom = maxOf(detectedInset, fallbackInset)
+        val keyboardVisible = hiddenBottom > getRealDisplayHeight() * 0.15f
+        LimeLog.info("IME avoidance: visibleFrameInset=$visibleFrameInset screenBottomInset=$screenBottomInset fallbackInset=$fallbackInset applied=${if (keyboardVisible) hiddenBottom else 0}")
         applyImeAvoidance(if (keyboardVisible) hiddenBottom else 0)
+    }
+
+    private fun getFallbackImeInset(): Int {
+        return getRealDisplayHeight() * IME_AVOIDANCE_FALLBACK_PERCENT / 100
+    }
+
+    private fun getRealDisplayHeight(): Int {
+        val metrics = DisplayMetrics()
+        windowManager.defaultDisplay.getRealMetrics(metrics)
+        return metrics.heightPixels
     }
 
     private fun applyImeAvoidance(bottomInset: Int) {
@@ -607,6 +638,7 @@ class Game : Activity(), SurfaceHolder.Callback,
     private fun pollImeAvoidance() {
         val root = imeAvoidanceRoot ?: return
         imeAvoidancePollsRemaining = IME_AVOIDANCE_POLL_COUNT
+        imeAvoidanceExpectingKeyboard = true
         root.removeCallbacks(imeAvoidancePollRunnable)
         root.post(imeAvoidancePollRunnable)
     }
@@ -1215,6 +1247,8 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (::floatBallHandler.isInitialized) {
             floatBallHandler.release()
         }
+        imeAvoidanceExpectingKeyboard = false
+        imeAvoidanceUsingFallback = false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             imeAvoidanceRoot?.viewTreeObserver?.removeOnGlobalLayoutListener(imeAvoidanceLayoutListener)
         }
@@ -1465,8 +1499,19 @@ class Game : Activity(), SurfaceHolder.Callback,
         LimeLog.info("Toggling keyboard overlay")
         streamView.clearFocus()
         val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        if (imeAvoidanceBottomInset > 0) {
+            imeAvoidanceExpectingKeyboard = false
+            imeAvoidanceUsingFallback = false
+            inputManager.hideSoftInputFromWindow(window.decorView.windowToken, 0)
+            applyImeAvoidance(0)
+            return
+        }
         inputManager.toggleSoftInput(0, 0)
         pollImeAvoidance()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            imeAvoidanceUsingFallback = true
+            applyImeAvoidance(getFallbackImeInset())
+        }
     }
 
     fun enableNativeMousePointer(enable: Boolean) {
@@ -2011,6 +2056,14 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
+        if (imeAvoidanceBottomInset > 0) {
+            imeAvoidanceExpectingKeyboard = false
+            imeAvoidanceUsingFallback = false
+            applyImeAvoidance(0)
+            val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+            inputManager.hideSoftInputFromWindow(window.decorView.windowToken, 0)
+            return
+        }
         showGameMenu(null)
     }
 
@@ -2123,6 +2176,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         private const val IME_AVOIDANCE_POLL_COUNT = 12
         private const val IME_AVOIDANCE_POLL_INTERVAL_MS = 80L
+        private const val IME_AVOIDANCE_FALLBACK_PERCENT = 45
 
         val EXTRA_HOST = "Host"
         val EXTRA_PORT = "Port"

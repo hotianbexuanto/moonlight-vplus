@@ -78,11 +78,15 @@ import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.View
+import android.view.Gravity
 import android.view.View.OnGenericMotionListener
 import android.view.View.OnSystemUiVisibilityChangeListener
 import android.view.View.OnTouchListener
 import android.view.Window
+import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.FrameLayout
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageButton
@@ -124,6 +128,28 @@ class Game : Activity(), SurfaceHolder.Callback,
     var controllerManager: ControllerManager? = null
     private var standaloneKeyboardUI: KeyboardUIController? = null
     private val performanceInfoDisplays = ArrayList<PerformanceInfoDisplay>()
+    private var imeAvoidanceRoot: ViewGroup? = null
+    private var imeAvoidanceBottomInset = 0
+    private var imeAvoidancePollsRemaining = 0
+    private val imeAvoidanceBaseMargins = HashMap<Int, Int>()
+    private val imeAvoidanceBaseTranslations = HashMap<Int, Float>()
+    private val imeAvoidanceLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
+        updateImeAvoidanceFromVisibleFrame()
+    }
+    private val imeAvoidancePollRunnable = object : Runnable {
+        override fun run() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                imeAvoidanceRoot?.requestApplyInsets()
+            } else {
+                updateImeAvoidanceFromVisibleFrame()
+            }
+
+            if (imeAvoidancePollsRemaining > 0) {
+                imeAvoidancePollsRemaining--
+                imeAvoidanceRoot?.postDelayed(this, IME_AVOIDANCE_POLL_INTERVAL_MS)
+            }
+        }
+    }
 
     var microphoneManager: MicrophoneManager? = null
     var micButton: ImageButton? = null
@@ -265,6 +291,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         volumeControlStream = AudioManager.STREAM_MUSIC
         setContentView(R.layout.activity_game)
         window.decorView.findViewById<View>(android.R.id.content).isFocusable = true
+        setupImeAvoidance()
 
         prefConfig = PreferenceConfiguration.readPreferences(this)
         orientationManager = OrientationManager(
@@ -518,6 +545,70 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     fun toggleVirtualKeyboard() {
         getOrCreateKeyboardUIController()?.toggle()
+    }
+
+    private fun setupImeAvoidance() {
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+
+        val root = findViewById<ViewGroup>(android.R.id.content) ?: return
+        imeAvoidanceRoot = root
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            root.setOnApplyWindowInsetsListener { _, insets ->
+                val imeBottom = insets.getInsets(WindowInsets.Type.ime()).bottom
+                applyImeAvoidance(imeBottom)
+                insets
+            }
+        } else {
+            root.viewTreeObserver.addOnGlobalLayoutListener(imeAvoidanceLayoutListener)
+            root.post { updateImeAvoidanceFromVisibleFrame() }
+        }
+    }
+
+    private fun updateImeAvoidanceFromVisibleFrame() {
+        val root = imeAvoidanceRoot ?: return
+        val visibleFrame = Rect()
+        root.getWindowVisibleDisplayFrame(visibleFrame)
+        val hiddenBottom = (root.rootView.height - visibleFrame.bottom).coerceAtLeast(0)
+        val keyboardVisible = hiddenBottom > root.rootView.height * 0.15f
+        applyImeAvoidance(if (keyboardVisible) hiddenBottom else 0)
+    }
+
+    private fun applyImeAvoidance(bottomInset: Int) {
+        if (imeAvoidanceBottomInset == bottomInset) return
+        imeAvoidanceBottomInset = bottomInset
+
+        applyImeAvoidanceToView(findViewById(R.id.surfaceView), bottomInset)
+        applyImeAvoidanceToView(findViewById(R.id.backgroundTouchView), bottomInset)
+        applyImeAvoidanceToView(findViewById(R.id.cursorOverlay), bottomInset)
+
+        if (::streamView.isInitialized) {
+            streamView.requestLayout()
+            streamView.post {
+                if (::cursorServiceManager.isInitialized) {
+                    cursorServiceManager.syncCursorWithStream()
+                }
+            }
+        }
+    }
+
+    private fun applyImeAvoidanceToView(view: View?, bottomInset: Int) {
+        val params = view?.layoutParams as? FrameLayout.LayoutParams ?: return
+        val key = view.id
+        val baseBottomMargin = imeAvoidanceBaseMargins.getOrPut(key) { params.bottomMargin }
+        val baseTranslationY = imeAvoidanceBaseTranslations.getOrPut(key) { view.translationY }
+        params.bottomMargin = baseBottomMargin + bottomInset
+        view.layoutParams = params
+
+        val isCenteredVertically = (params.gravity and Gravity.VERTICAL_GRAVITY_MASK) == Gravity.CENTER_VERTICAL
+        view.translationY = baseTranslationY + if (isCenteredVertically) bottomInset / 2f else 0f
+    }
+
+    private fun pollImeAvoidance() {
+        val root = imeAvoidanceRoot ?: return
+        imeAvoidancePollsRemaining = IME_AVOIDANCE_POLL_COUNT
+        root.removeCallbacks(imeAvoidancePollRunnable)
+        root.post(imeAvoidancePollRunnable)
     }
 
     // region ---- Extracted helpers to reduce duplication ----
@@ -1124,6 +1215,10 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (::floatBallHandler.isInitialized) {
             floatBallHandler.release()
         }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            imeAvoidanceRoot?.viewTreeObserver?.removeOnGlobalLayoutListener(imeAvoidanceLayoutListener)
+        }
+        imeAvoidanceRoot?.removeCallbacks(imeAvoidancePollRunnable)
 
         super.onDestroy()
 
@@ -1371,6 +1466,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         streamView.clearFocus()
         val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         inputManager.toggleSoftInput(0, 0)
+        pollImeAvoidance()
     }
 
     fun enableNativeMousePointer(enable: Boolean) {
@@ -2024,6 +2120,9 @@ class Game : Activity(), SurfaceHolder.Callback,
     companion object {
         val REFERENCE_HORIZ_RES = 1280
         val REFERENCE_VERT_RES = 720
+
+        private const val IME_AVOIDANCE_POLL_COUNT = 12
+        private const val IME_AVOIDANCE_POLL_INTERVAL_MS = 80L
 
         val EXTRA_HOST = "Host"
         val EXTRA_PORT = "Port"

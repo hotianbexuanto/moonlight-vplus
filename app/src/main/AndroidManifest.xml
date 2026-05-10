@@ -224,6 +224,7 @@
             android:resizeableActivity="true"
             android:enableOnBackInvokedCallback="false"
             android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
 
             android:theme="@style/StreamTheme"
             android:preferMinimalPostProcessing="true"

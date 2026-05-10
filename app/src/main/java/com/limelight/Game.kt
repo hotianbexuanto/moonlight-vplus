@@ -39,6 +39,7 @@ import com.limelight.preferences.PreferenceConfiguration
 import com.limelight.services.StreamNotificationService
 import com.limelight.ui.CursorView
 import com.limelight.ui.GameGestures
+import com.limelight.ui.RemoteImeEditText
 import com.limelight.ui.StreamView
 import com.limelight.utils.Dialog
 import com.limelight.utils.PanZoomHandler
@@ -59,10 +60,8 @@ import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.graphics.Color
 import android.graphics.Point
 import android.graphics.Rect
-import android.graphics.drawable.ColorDrawable
 import android.hardware.input.InputManager
 import android.media.AudioManager
 import android.net.ConnectivityManager
@@ -72,7 +71,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import androidx.preference.PreferenceManager
-import android.util.DisplayMetrics
 import android.util.Rational
 import android.view.Display
 import android.view.InputDevice
@@ -86,19 +84,19 @@ import android.view.View.OnGenericMotionListener
 import android.view.View.OnSystemUiVisibilityChangeListener
 import android.view.View.OnTouchListener
 import android.view.Window
-import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.FrameLayout
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageButton
-import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.app.ActivityCompat
 import androidx.annotation.RequiresApi
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 import java.io.ByteArrayInputStream
 import java.lang.reflect.InvocationTargetException
@@ -135,19 +133,20 @@ class Game : Activity(), SurfaceHolder.Callback,
     private var imeAvoidanceRoot: ViewGroup? = null
     private var imeAvoidanceBottomInset = 0
     private var imeAvoidancePollsRemaining = 0
-    private var imeMeasurePopup: PopupWindow? = null
-    private var imeMeasureView: View? = null
     private val imeAvoidanceBaseMargins = HashMap<Int, Int>()
+    private val imeAvoidanceBaseTranslations = HashMap<Int, Float>()
+    private var keyboardAnchor: RemoteImeEditText? = null
+    private var suppressRemoteImeCallback = false
+    private var androidKeyboardVisible = false
     private val imeAvoidanceLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
-        updateImeAvoidanceFromMeasureView()
+        syncImeAdjustedLayout()
     }
     private val imeAvoidancePollRunnable = object : Runnable {
         override fun run() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                imeAvoidanceRoot?.requestApplyInsets()
+                requestImeInsets()
             } else {
-                ensureImeMeasurePopup()
-                updateImeAvoidanceFromMeasureView()
+                syncImeAdjustedLayout()
             }
 
             if (imeAvoidancePollsRemaining > 0) {
@@ -440,6 +439,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         createConnectionAndHandler()
         keyboardInputHandler = KeyboardInputHandler(this)
         keyboardInputHandler.keyboardTranslator = KeyboardTranslator()
+        setupKeyboardAnchor()
 
         audioVibrationService = AudioVibrationService(this)
         audioVibrationService?.controllerHandler = controllerHandler
@@ -553,71 +553,105 @@ class Game : Activity(), SurfaceHolder.Callback,
         getOrCreateKeyboardUIController()?.toggle()
     }
 
+    private fun setupKeyboardAnchor() {
+        keyboardAnchor = findViewById<RemoteImeEditText>(R.id.keyboardAnchor)?.apply {
+            remoteInputListener = object : RemoteImeEditText.RemoteInputListener {
+                override fun onCommitText(text: CharSequence) {
+                    if (!suppressRemoteImeCallback) {
+                        conn?.sendUtf8Text(text.toString())
+                        clearKeyboardAnchorText()
+                    }
+                }
+
+                override fun onDeleteSurroundingText(beforeLength: Int) {
+                    repeat(beforeLength.coerceAtLeast(1)) {
+                        sendRemoteImeKey(KeyEvent.KEYCODE_DEL)
+                    }
+                }
+
+                override fun onSendKeyEvent(event: KeyEvent) {
+                    when (event.action) {
+                        KeyEvent.ACTION_DOWN -> keyboardInputHandler.handleKeyDown(event)
+                        KeyEvent.ACTION_UP -> keyboardInputHandler.handleKeyUp(event)
+                        KeyEvent.ACTION_MULTIPLE -> keyboardInputHandler.handleKeyMultiple(event)
+                    }
+                }
+
+                override fun onEditorAction(actionId: Int) {
+                    sendRemoteImeKey(KeyEvent.KEYCODE_ENTER)
+                }
+            }
+        }
+    }
+
+    private fun sendRemoteImeKey(keyCode: Int) {
+        val now = android.os.SystemClock.uptimeMillis()
+        val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0)
+        val up = KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0)
+        keyboardInputHandler.handleKeyDown(down)
+        keyboardInputHandler.handleKeyUp(up)
+    }
+
+    private fun clearKeyboardAnchorText() {
+        val anchor = keyboardAnchor ?: return
+        anchor.post {
+            suppressRemoteImeCallback = true
+            anchor.text?.clear()
+            suppressRemoteImeCallback = false
+        }
+    }
+
+    private fun enterAndroidKeyboardMode() {
+        androidKeyboardVisible = true
+        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+    }
+
+    private fun exitAndroidKeyboardMode() {
+        androidKeyboardVisible = false
+        window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        hideSystemUi(50)
+    }
+
     private fun setupImeAvoidance() {
-        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
         val root = findViewById<ViewGroup>(android.R.id.content) ?: return
         imeAvoidanceRoot = root
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            root.setOnApplyWindowInsetsListener { _, insets ->
-                val imeBottom = insets.getInsets(WindowInsets.Type.ime()).bottom
-                applyImeAvoidance(imeBottom)
-                insets
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+                val keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime()) || imeBottom > 0
+                LimeLog.info("IME avoidance: compatImeBottom=$imeBottom visible=$keyboardVisible")
+                applyImeAvoidance(if (keyboardVisible) imeBottom else 0)
+            } else {
+                syncImeAdjustedLayout()
             }
-        } else {
-            setupImeMeasurePopup()
+            insets
         }
+
+        root.viewTreeObserver.addOnGlobalLayoutListener(imeAvoidanceLayoutListener)
+        root.post { requestImeInsets() }
     }
 
-    private fun setupImeMeasurePopup() {
-        val root = imeAvoidanceRoot ?: return
-        val measureView = View(this)
-        imeMeasureView = measureView
-        measureView.viewTreeObserver.addOnGlobalLayoutListener(imeAvoidanceLayoutListener)
-        imeMeasurePopup = PopupWindow(measureView, 1, ViewGroup.LayoutParams.MATCH_PARENT, false).apply {
-            inputMethodMode = PopupWindow.INPUT_METHOD_NEEDED
-            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
-            isClippingEnabled = false
-            isTouchable = false
-            isOutsideTouchable = false
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    private fun requestImeInsets() {
+        imeAvoidanceRoot?.let { ViewCompat.requestApplyInsets(it) }
+    }
+
+    private fun syncImeAdjustedLayout() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            if (imeAvoidanceBottomInset != 0) {
+                applyImeAvoidance(0)
+            } else if (::streamView.isInitialized) {
+                streamView.post {
+                    if (::cursorServiceManager.isInitialized) {
+                        cursorServiceManager.syncCursorWithStream()
+                    }
+                }
+            }
         }
-        root.post { ensureImeMeasurePopup() }
-    }
-
-    private fun ensureImeMeasurePopup() {
-        val root = imeAvoidanceRoot ?: return
-        val popup = imeMeasurePopup ?: return
-        if (popup.isShowing || root.windowToken == null || isFinishing) return
-        try {
-            popup.showAtLocation(root, Gravity.NO_GRAVITY, 0, 0)
-        } catch (e: RuntimeException) {
-            LimeLog.warning("IME avoidance popup failed: ${e.message}")
-        }
-    }
-
-    private fun updateImeAvoidanceFromMeasureView() {
-        val measureView = imeMeasureView ?: return
-        if (measureView.height <= 0) return
-
-        val visibleFrame = Rect()
-        measureView.getWindowVisibleDisplayFrame(visibleFrame)
-        val screenLocation = IntArray(2)
-        measureView.getLocationOnScreen(screenLocation)
-        val realHeight = getRealDisplayHeight()
-        val visibleFrameInset = (realHeight - visibleFrame.bottom).coerceAtLeast(0)
-        val resizedWindowInset = (realHeight - (screenLocation[1] + measureView.height)).coerceAtLeast(0)
-        val hiddenBottom = maxOf(visibleFrameInset, resizedWindowInset)
-        val keyboardVisible = hiddenBottom > getRealDisplayHeight() * 0.15f
-        LimeLog.info("IME avoidance: visibleFrameInset=$visibleFrameInset resizedWindowInset=$resizedWindowInset applied=${if (keyboardVisible) hiddenBottom else 0}")
-        applyImeAvoidance(if (keyboardVisible) hiddenBottom else 0)
-    }
-
-    private fun getRealDisplayHeight(): Int {
-        val metrics = DisplayMetrics()
-        windowManager.defaultDisplay.getRealMetrics(metrics)
-        return metrics.heightPixels
     }
 
     private fun applyImeAvoidance(bottomInset: Int) {
@@ -642,16 +676,22 @@ class Game : Activity(), SurfaceHolder.Callback,
         val params = view?.layoutParams as? FrameLayout.LayoutParams ?: return
         val key = view.id
         val baseBottomMargin = imeAvoidanceBaseMargins.getOrPut(key) { params.bottomMargin }
+        val baseTranslationY = imeAvoidanceBaseTranslations.getOrPut(key) { view.translationY }
         params.bottomMargin = baseBottomMargin + bottomInset
         view.layoutParams = params
+
+        val isCenteredVertically = (params.gravity and Gravity.VERTICAL_GRAVITY_MASK) == Gravity.CENTER_VERTICAL
+        view.translationY = baseTranslationY + if (isCenteredVertically) bottomInset / 2f else 0f
     }
 
     private fun pollImeAvoidance() {
         val root = imeAvoidanceRoot ?: return
         imeAvoidancePollsRemaining = IME_AVOIDANCE_POLL_COUNT
-        ensureImeMeasurePopup()
         root.removeCallbacks(imeAvoidancePollRunnable)
         root.post(imeAvoidancePollRunnable)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            root.requestLayout()
+        }
     }
 
     // region ---- Extracted helpers to reduce duplication ----
@@ -1215,6 +1255,11 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     @SuppressLint("InlinedApi")
     private val hideSystemUiRunnable = Runnable {
+        if (androidKeyboardVisible) {
+            window.decorView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            return@Runnable
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInMultiWindowMode) {
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         } else {
@@ -1258,10 +1303,7 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (::floatBallHandler.isInitialized) {
             floatBallHandler.release()
         }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            imeMeasureView?.viewTreeObserver?.removeOnGlobalLayoutListener(imeAvoidanceLayoutListener)
-            imeMeasurePopup?.dismiss()
-        }
+        imeAvoidanceRoot?.viewTreeObserver?.removeOnGlobalLayoutListener(imeAvoidanceLayoutListener)
         imeAvoidanceRoot?.removeCallbacks(imeAvoidancePollRunnable)
 
         super.onDestroy()
@@ -1509,12 +1551,18 @@ class Game : Activity(), SurfaceHolder.Callback,
         LimeLog.info("Toggling keyboard overlay")
         streamView.clearFocus()
         val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-        if (imeAvoidanceBottomInset > 0) {
-            inputManager.hideSoftInputFromWindow(window.decorView.windowToken, 0)
+        if (androidKeyboardVisible || imeAvoidanceBottomInset > 0) {
+            inputManager.hideSoftInputFromWindow((keyboardAnchor ?: window.decorView).windowToken, 0)
             applyImeAvoidance(0)
+            clearKeyboardAnchorText()
+            streamView.requestFocus()
+            exitAndroidKeyboardMode()
             return
         }
-        inputManager.toggleSoftInput(0, 0)
+        enterAndroidKeyboardMode()
+        val anchor = keyboardAnchor ?: streamView
+        anchor.requestFocus()
+        inputManager.showSoftInput(anchor, InputMethodManager.SHOW_IMPLICIT)
         pollImeAvoidance()
     }
 
@@ -1967,7 +2015,7 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     @Deprecated("Deprecated in Java")
     override fun onSystemUiVisibilityChange(visibility: Int) {
-        if (!connected) return
+        if (!connected || androidKeyboardVisible) return
         if ((visibility and View.SYSTEM_UI_FLAG_FULLSCREEN) == 0 ||
             (visibility and View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) == 0
         ) {
@@ -2060,10 +2108,13 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (imeAvoidanceBottomInset > 0) {
+        if (androidKeyboardVisible || imeAvoidanceBottomInset > 0) {
             applyImeAvoidance(0)
             val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-            inputManager.hideSoftInputFromWindow(window.decorView.windowToken, 0)
+            inputManager.hideSoftInputFromWindow((keyboardAnchor ?: window.decorView).windowToken, 0)
+            clearKeyboardAnchorText()
+            streamView.requestFocus()
+            exitAndroidKeyboardMode()
             return
         }
         showGameMenu(null)

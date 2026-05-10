@@ -190,6 +190,7 @@ dependencies {
     implementation libs.jmdns
     implementation libs.shield.controller
     implementation libs.appcompat
+    implementation libs.core
     implementation libs.core.splashscreen
     implementation libs.preference
     implementation libs.keyboard.header

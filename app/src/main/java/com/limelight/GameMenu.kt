@@ -116,9 +116,14 @@ class GameMenu(
      */
     private enum class KeyModifier(val keyCode: Short, val modifier: Byte) {
         SHIFT(KeyboardTranslator.VK_LSHIFT.s(), KeyboardPacket.MODIFIER_SHIFT),
+        RSHIFT(0xA1.s(), KeyboardPacket.MODIFIER_SHIFT),
         CTRL(KeyboardTranslator.VK_LCONTROL.s(), KeyboardPacket.MODIFIER_CTRL),
+        RCTRL(0xA3.s(), KeyboardPacket.MODIFIER_CTRL),
         META(KeyboardTranslator.VK_LWIN.s(), KeyboardPacket.MODIFIER_META),
-        ALT(KeyboardTranslator.VK_MENU.s(), KeyboardPacket.MODIFIER_ALT);
+        RMETA(0x5C.s(), KeyboardPacket.MODIFIER_META),
+        ALT(KeyboardTranslator.VK_MENU.s(), KeyboardPacket.MODIFIER_ALT),
+        LALT(0xA4.s(), KeyboardPacket.MODIFIER_ALT),
+        RALT(0xA5.s(), KeyboardPacket.MODIFIER_ALT);
 
         companion object {
             fun getModifier(key: Short): Byte =

@@ -1,723 +1,206 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/keyboard_drawing"
+    style="@style/VirtualKeyboardStyle"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    style="@style/VirtualKeyboardStyle"
-    android:minHeight="180dp"
-    android:maxHeight="450dp">
+    android:minHeight="260dp"
+    android:orientation="vertical">
 
-    <LinearLayout
+    <HorizontalScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:minHeight="32dp"
-        android:orientation="horizontal"
-        android:layout_marginBottom="2dp"
-        android:paddingLeft="1dp"
-        android:paddingRight="1dp">
+        android:layout_height="38dp"
+        android:fillViewport="false"
+        android:scrollbars="horizontal">
 
-        <TextView
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="111"
-            android:text="ESC" />
+            android:orientation="horizontal"
+            android:paddingStart="1dp"
+            android:paddingEnd="1dp">
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="131"
-            android:text="F1" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="56dp" android:layout_height="match_parent" android:tag="111" android:text="Esc" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="48dp" android:layout_height="match_parent" android:tag="131" android:text="F1" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="48dp" android:layout_height="match_parent" android:tag="132" android:text="F2" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="48dp" android:layout_height="match_parent" android:tag="133" android:text="F3" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="48dp" android:layout_height="match_parent" android:tag="134" android:text="F4" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="48dp" android:layout_height="match_parent" android:tag="135" android:text="F5" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="48dp" android:layout_height="match_parent" android:tag="136" android:text="F6" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="48dp" android:layout_height="match_parent" android:tag="137" android:text="F7" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="48dp" android:layout_height="match_parent" android:tag="138" android:text="F8" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="48dp" android:layout_height="match_parent" android:tag="139" android:text="F9" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="52dp" android:layout_height="match_parent" android:tag="140" android:text="F10" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="52dp" android:layout_height="match_parent" android:tag="141" android:text="F11" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="52dp" android:layout_height="match_parent" android:tag="142" android:text="F12" android:textSize="12sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="62dp" android:layout_height="match_parent" android:tag="120" android:text="PrtSc" android:textSize="11sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="62dp" android:layout_height="match_parent" android:tag="116" android:text="ScrLk" android:textSize="11sp" />
+            <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="62dp" android:layout_height="match_parent" android:tag="121" android:text="Pause" android:textSize="11sp" />
+        </LinearLayout>
+    </HorizontalScrollView>
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="132"
-            android:text="F2" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="133"
-            android:text="F3" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="134"
-            android:text="F4" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="135"
-            android:text="F5" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="136"
-            android:text="F6" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="137"
-            android:text="F7" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="138"
-            android:text="F8" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="139"
-            android:text="F9" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="140"
-            android:text="F10" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="141"
-            android:text="F11" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="142"
-            android:text="F12" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="124"
-            android:text="Ins" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="112"
-            android:text="Del" />
-    </LinearLayout>
-
-    <LinearLayout
+    <HorizontalScrollView
         android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:orientation="horizontal"
-        android:layout_marginBottom="2dp"
-        android:paddingLeft="1dp"
-        android:paddingRight="1dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="90"
-            style="@style/KeyboardKeyStyle"
-            android:tag="68"
-            android:text="~\n`" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="8"
-            android:text="1" />
-        <!-- 继续更新其他 TextView 的 android:tag 值 -->
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="9"
-            android:text="2" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="10"
-            android:text="3" />
-        <!-- 以此类推，更新其他 TextView 的 android:tag 值 -->
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="11"
-            android:text="4" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="12"
-            android:text="5" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="13"
-            android:text="6" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="14"
-            android:text="7" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="15"
-            android:text="8" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="16"
-            android:text="9" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="7"
-            android:text="0" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="69"
-            android:text="_\n-" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="70"
-            android:text="+\n=" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="140"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="67"
-            android:text="Back" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:orientation="horizontal"
-        android:layout_marginBottom="2dp"
-        android:paddingLeft="1dp"
-        android:paddingRight="1dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="140"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="61"
-            android:text="Tab" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="45"
-            android:text="Q" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="51"
-            android:text="W" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="33"
-            android:text="E" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="46"
-            android:text="R" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="48"
-            android:text="T" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="53"
-            android:text="Y" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="49"
-            android:text="U" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="37"
-            android:text="I" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="43"
-            android:text="O" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="44"
-            android:text="P" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="71"
-            android:text="{\n[" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="72"
-            android:text="}\n]" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="73"
-            android:text="|\n\\" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:orientation="horizontal"
-        android:layout_marginBottom="2dp"
-        android:paddingLeft="1dp"
-        android:paddingRight="1dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="150"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="115"
-            android:text="Cap" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="29"
-            android:text="A" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="47"
-            android:text="S" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="32"
-            android:text="D" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="34"
-            android:text="F" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="35"
-            android:text="G" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="36"
-            android:text="H" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="38"
-            android:text="J" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="39"
-            android:text="K" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="40"
-            android:text="L" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="74"
-            android:text=":\n;" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="75"
-            android:text="&quot;\n'" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="160"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="66"
-            android:text="Enter" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:orientation="horizontal"
-        android:layout_marginBottom="2dp"
-        android:paddingLeft="1dp"
-        android:paddingRight="1dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="160"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="59"
-            android:text="Shift" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="54"
-            android:text="Z" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="52"
-            android:text="X" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="31"
-            android:text="C" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="50"
-            android:text="V" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="30"
-            android:text="B" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="42"
-            android:text="N" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="41"
-            android:text="M" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="55"
-            android:text="&lt;\n," />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="56"
-            android:text=">\n." />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="76"
-            android:text="&#63;&#10;/" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="160"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="60"
-            android:text="Shift" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:orientation="horizontal"
-        android:layout_marginBottom="2dp"
-        android:paddingLeft="1dp"
-        android:paddingRight="1dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="113"
-            android:text="Ctrl" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="117"
-            android:text="Win" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="57"
-            android:text="Alt" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="240"
-            style="@style/KeyboardSpaceKeyStyle"
-            android:tag="62"
-            android:text="Space" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="58"
-            android:text="Alt" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="114"
-            android:text="Ctrl" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="19"
-            android:text="↑" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="20"
-            android:text="↓" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="21"
-            android:text="←" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardKeyStyle"
-            android:tag="22"
-            android:text="→" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="122"
-            android:text="Home" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="123"
-            android:text="End" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="92"
-            android:text="PgUp" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="100"
-            style="@style/KeyboardFunctionKeyStyle"
-            android:tag="93"
-            android:text="PgDn" />
-    </LinearLayout>
-
+        android:layout_height="wrap_content"
+        android:fillViewport="false"
+        android:scrollbars="horizontal">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="1dp"
+            android:paddingEnd="1dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="68" android:text="` ~" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="8" android:text="1 !" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="9" android:text="2 @" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="10" android:text="3 #" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="11" android:text="4 $" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="12" android:text="5 %" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="13" android:text="6 ^" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="14" android:text="7 &amp;" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="15" android:text="8 *" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="16" android:text="9 (" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="7" android:text="0 )" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="69" android:text="- _" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="70" android:text="= +" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="72dp" android:layout_height="match_parent" android:tag="67" android:text="Back" android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="66dp" android:layout_height="match_parent" android:tag="61" android:text="Tab" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="45" android:text="Q" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="51" android:text="W" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="33" android:text="E" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="46" android:text="R" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="48" android:text="T" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="53" android:text="Y" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="49" android:text="U" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="37" android:text="I" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="43" android:text="O" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="44" android:text="P" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="71" android:text="[ {" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="72" android:text="] }" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="50dp" android:layout_height="match_parent" android:tag="73" android:text="&#92; |" android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="78dp" android:layout_height="match_parent" android:tag="115" android:text="Caps" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="29" android:text="A" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="47" android:text="S" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="32" android:text="D" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="34" android:text="F" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="35" android:text="G" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="36" android:text="H" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="38" android:text="J" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="39" android:text="K" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="40" android:text="L" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="74" android:text="; :" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="75" android:text="' &quot;" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="92dp" android:layout_height="match_parent" android:tag="66" android:text="Enter" android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="94dp" android:layout_height="match_parent" android:tag="59" android:text="L-Shift" android:textSize="11sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="54" android:text="Z" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="52" android:text="X" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="31" android:text="C" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="50" android:text="V" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="30" android:text="B" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="42" android:text="N" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="41" android:text="M" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="55" android:text=", &lt;" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="56" android:text=". &gt;" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="44dp" android:layout_height="match_parent" android:tag="76" android:text="/ ?" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="94dp" android:layout_height="match_parent" android:tag="60" android:text="R-Shift" android:textSize="11sp" />
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="113" android:text="L-Ctrl" android:textSize="10sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="117" android:text="L-Win" android:textSize="10sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="57" android:text="L-Alt" android:textSize="10sp" />
+                    <TextView style="@style/KeyboardSpaceKeyStyle" android:layout_width="252dp" android:layout_height="match_parent" android:tag="62" android:text="Space" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="58" android:text="R-Alt" android:textSize="10sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="118" android:text="R-Win" android:textSize="10sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="82" android:text="Menu" android:textSize="10sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="114" android:text="R-Ctrl" android:textSize="10sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="124" android:text="Ins" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="122" android:text="Home" android:textSize="11sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="92" android:text="PgUp" android:textSize="11sp" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="112" android:text="Del" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="123" android:text="End" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="93" android:text="PgDn" android:textSize="11sp" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:visibility="invisible" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="19" android:text="Up" android:textSize="12sp" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:visibility="invisible" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="21" android:text="Left" android:textSize="11sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="20" android:text="Down" android:textSize="11sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="22" android:text="Right" android:textSize="11sp" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="58dp" android:layout_height="match_parent" android:tag="28" android:text="Clear" android:textSize="11sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="143" android:text="Num" android:textSize="11sp" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="154" android:text="/" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="155" android:text="*" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="156" android:text="-" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="151" android:text="7" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="152" android:text="8" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="153" android:text="9" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="157" android:text="+" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="148" android:text="4" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="149" android:text="5" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="150" android:text="6" />
+                    <TextView style="@style/KeyboardFunctionKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="160" android:text="Enter" android:textSize="10sp" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="145" android:text="1" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="146" android:text="2" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="147" android:text="3" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="161" android:text="=" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="42dp" android:orientation="horizontal">
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="108dp" android:layout_height="match_parent" android:tag="144" android:text="0" />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="158" android:text="." />
+                    <TextView style="@style/KeyboardKeyStyle" android:layout_width="54dp" android:layout_height="match_parent" android:tag="159" android:text="," />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </HorizontalScrollView>
 </LinearLayout>

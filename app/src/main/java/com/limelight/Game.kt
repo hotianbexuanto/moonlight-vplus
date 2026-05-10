@@ -59,8 +59,10 @@ import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Color
 import android.graphics.Point
 import android.graphics.Rect
+import android.graphics.drawable.ColorDrawable
 import android.hardware.input.InputManager
 import android.media.AudioManager
 import android.net.ConnectivityManager
@@ -91,6 +93,7 @@ import android.view.ViewTreeObserver
 import android.widget.FrameLayout
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageButton
+import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -132,19 +135,19 @@ class Game : Activity(), SurfaceHolder.Callback,
     private var imeAvoidanceRoot: ViewGroup? = null
     private var imeAvoidanceBottomInset = 0
     private var imeAvoidancePollsRemaining = 0
-    private var imeAvoidanceExpectingKeyboard = false
-    private var imeAvoidanceUsingFallback = false
+    private var imeMeasurePopup: PopupWindow? = null
+    private var imeMeasureView: View? = null
     private val imeAvoidanceBaseMargins = HashMap<Int, Int>()
-    private val imeAvoidanceBaseTranslations = HashMap<Int, Float>()
     private val imeAvoidanceLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
-        updateImeAvoidanceFromVisibleFrame()
+        updateImeAvoidanceFromMeasureView()
     }
     private val imeAvoidancePollRunnable = object : Runnable {
         override fun run() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 imeAvoidanceRoot?.requestApplyInsets()
             } else {
-                updateImeAvoidanceFromVisibleFrame()
+                ensureImeMeasurePopup()
+                updateImeAvoidanceFromMeasureView()
             }
 
             if (imeAvoidancePollsRemaining > 0) {
@@ -563,40 +566,52 @@ class Game : Activity(), SurfaceHolder.Callback,
                 insets
             }
         } else {
-            root.viewTreeObserver.addOnGlobalLayoutListener(imeAvoidanceLayoutListener)
-            root.post { updateImeAvoidanceFromVisibleFrame() }
+            setupImeMeasurePopup()
         }
     }
 
-    private fun updateImeAvoidanceFromVisibleFrame() {
+    private fun setupImeMeasurePopup() {
         val root = imeAvoidanceRoot ?: return
-        val visibleFrame = Rect()
-        root.getWindowVisibleDisplayFrame(visibleFrame)
-        val visibleFrameInset = (root.rootView.height - visibleFrame.bottom).coerceAtLeast(0)
-        val screenLocation = IntArray(2)
-        root.getLocationOnScreen(screenLocation)
-        val screenBottomInset = (getRealDisplayHeight() - (screenLocation[1] + root.height)).coerceAtLeast(0)
-        val detectedInset = maxOf(visibleFrameInset, screenBottomInset)
-
-        if (detectedInset > 0) {
-            imeAvoidanceUsingFallback = false
-        } else if (!imeAvoidanceUsingFallback) {
-            imeAvoidanceExpectingKeyboard = false
+        val measureView = View(this)
+        imeMeasureView = measureView
+        measureView.viewTreeObserver.addOnGlobalLayoutListener(imeAvoidanceLayoutListener)
+        imeMeasurePopup = PopupWindow(measureView, 1, ViewGroup.LayoutParams.MATCH_PARENT, false).apply {
+            inputMethodMode = PopupWindow.INPUT_METHOD_NEEDED
+            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+            isClippingEnabled = false
+            isTouchable = false
+            isOutsideTouchable = false
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         }
-
-        val fallbackInset = if (imeAvoidanceExpectingKeyboard &&
-            imeAvoidanceUsingFallback &&
-            detectedInset == 0
-        ) getFallbackImeInset() else 0
-
-        val hiddenBottom = maxOf(detectedInset, fallbackInset)
-        val keyboardVisible = hiddenBottom > getRealDisplayHeight() * 0.15f
-        LimeLog.info("IME avoidance: visibleFrameInset=$visibleFrameInset screenBottomInset=$screenBottomInset fallbackInset=$fallbackInset applied=${if (keyboardVisible) hiddenBottom else 0}")
-        applyImeAvoidance(if (keyboardVisible) hiddenBottom else 0)
+        root.post { ensureImeMeasurePopup() }
     }
 
-    private fun getFallbackImeInset(): Int {
-        return getRealDisplayHeight() * IME_AVOIDANCE_FALLBACK_PERCENT / 100
+    private fun ensureImeMeasurePopup() {
+        val root = imeAvoidanceRoot ?: return
+        val popup = imeMeasurePopup ?: return
+        if (popup.isShowing || root.windowToken == null || isFinishing) return
+        try {
+            popup.showAtLocation(root, Gravity.NO_GRAVITY, 0, 0)
+        } catch (e: RuntimeException) {
+            LimeLog.warning("IME avoidance popup failed: ${e.message}")
+        }
+    }
+
+    private fun updateImeAvoidanceFromMeasureView() {
+        val measureView = imeMeasureView ?: return
+        if (measureView.height <= 0) return
+
+        val visibleFrame = Rect()
+        measureView.getWindowVisibleDisplayFrame(visibleFrame)
+        val screenLocation = IntArray(2)
+        measureView.getLocationOnScreen(screenLocation)
+        val realHeight = getRealDisplayHeight()
+        val visibleFrameInset = (realHeight - visibleFrame.bottom).coerceAtLeast(0)
+        val resizedWindowInset = (realHeight - (screenLocation[1] + measureView.height)).coerceAtLeast(0)
+        val hiddenBottom = maxOf(visibleFrameInset, resizedWindowInset)
+        val keyboardVisible = hiddenBottom > getRealDisplayHeight() * 0.15f
+        LimeLog.info("IME avoidance: visibleFrameInset=$visibleFrameInset resizedWindowInset=$resizedWindowInset applied=${if (keyboardVisible) hiddenBottom else 0}")
+        applyImeAvoidance(if (keyboardVisible) hiddenBottom else 0)
     }
 
     private fun getRealDisplayHeight(): Int {
@@ -627,18 +642,14 @@ class Game : Activity(), SurfaceHolder.Callback,
         val params = view?.layoutParams as? FrameLayout.LayoutParams ?: return
         val key = view.id
         val baseBottomMargin = imeAvoidanceBaseMargins.getOrPut(key) { params.bottomMargin }
-        val baseTranslationY = imeAvoidanceBaseTranslations.getOrPut(key) { view.translationY }
         params.bottomMargin = baseBottomMargin + bottomInset
         view.layoutParams = params
-
-        val isCenteredVertically = (params.gravity and Gravity.VERTICAL_GRAVITY_MASK) == Gravity.CENTER_VERTICAL
-        view.translationY = baseTranslationY + if (isCenteredVertically) bottomInset / 2f else 0f
     }
 
     private fun pollImeAvoidance() {
         val root = imeAvoidanceRoot ?: return
         imeAvoidancePollsRemaining = IME_AVOIDANCE_POLL_COUNT
-        imeAvoidanceExpectingKeyboard = true
+        ensureImeMeasurePopup()
         root.removeCallbacks(imeAvoidancePollRunnable)
         root.post(imeAvoidancePollRunnable)
     }
@@ -1247,10 +1258,9 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (::floatBallHandler.isInitialized) {
             floatBallHandler.release()
         }
-        imeAvoidanceExpectingKeyboard = false
-        imeAvoidanceUsingFallback = false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            imeAvoidanceRoot?.viewTreeObserver?.removeOnGlobalLayoutListener(imeAvoidanceLayoutListener)
+            imeMeasureView?.viewTreeObserver?.removeOnGlobalLayoutListener(imeAvoidanceLayoutListener)
+            imeMeasurePopup?.dismiss()
         }
         imeAvoidanceRoot?.removeCallbacks(imeAvoidancePollRunnable)
 
@@ -1500,18 +1510,12 @@ class Game : Activity(), SurfaceHolder.Callback,
         streamView.clearFocus()
         val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         if (imeAvoidanceBottomInset > 0) {
-            imeAvoidanceExpectingKeyboard = false
-            imeAvoidanceUsingFallback = false
             inputManager.hideSoftInputFromWindow(window.decorView.windowToken, 0)
             applyImeAvoidance(0)
             return
         }
         inputManager.toggleSoftInput(0, 0)
         pollImeAvoidance()
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            imeAvoidanceUsingFallback = true
-            applyImeAvoidance(getFallbackImeInset())
-        }
     }
 
     fun enableNativeMousePointer(enable: Boolean) {
@@ -2057,8 +2061,6 @@ class Game : Activity(), SurfaceHolder.Callback,
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (imeAvoidanceBottomInset > 0) {
-            imeAvoidanceExpectingKeyboard = false
-            imeAvoidanceUsingFallback = false
             applyImeAvoidance(0)
             val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
             inputManager.hideSoftInputFromWindow(window.decorView.windowToken, 0)
@@ -2176,8 +2178,6 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         private const val IME_AVOIDANCE_POLL_COUNT = 12
         private const val IME_AVOIDANCE_POLL_INTERVAL_MS = 80L
-        private const val IME_AVOIDANCE_FALLBACK_PERCENT = 45
-
         val EXTRA_HOST = "Host"
         val EXTRA_PORT = "Port"
         val EXTRA_HTTPS_PORT = "HttpsPort"

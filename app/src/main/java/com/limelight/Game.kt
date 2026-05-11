@@ -133,11 +133,25 @@ class Game : Activity(), SurfaceHolder.Callback,
     private var imeAvoidanceRoot: ViewGroup? = null
     private var imeAvoidanceBottomInset = 0
     private var imeAvoidancePollsRemaining = 0
-    private val imeAvoidanceBaseMargins = HashMap<Int, Int>()
-    private val imeAvoidanceBaseTranslations = HashMap<Int, Float>()
+    private var imeManualOffsetY = 0f
+    private var imePanLastY = 0f
+    private var imePanActive = false
+    private var imeUserPanned = false
+    private var imeRootBaseHeight = 0
+    private val imeViewBaseStates = HashMap<Int, ImeViewBaseState>()
     private var keyboardAnchor: RemoteImeEditText? = null
     private var suppressRemoteImeCallback = false
     private var androidKeyboardVisible = false
+
+    private data class ImeViewBaseState(
+        val layoutParams: FrameLayout.LayoutParams,
+        val translationX: Float,
+        val translationY: Float,
+        val width: Int,
+        val height: Int,
+        val left: Int,
+        val top: Int
+    )
     private val imeAvoidanceLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
         syncImeAdjustedLayout()
     }
@@ -603,6 +617,10 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun enterAndroidKeyboardMode() {
         androidKeyboardVisible = true
+        imeManualOffsetY = 0f
+        imeRootBaseHeight = imeAvoidanceRoot?.height ?: 0
+        imeUserPanned = false
+        captureImeBaseStates()
         window.clearFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
@@ -617,9 +635,27 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun exitAndroidKeyboardMode() {
         androidKeyboardVisible = false
+        imeRootBaseHeight = 0
+        imeManualOffsetY = 0f
+        imePanActive = false
+        imeUserPanned = false
+        imeAvoidanceRoot?.removeCallbacks(imeAvoidancePollRunnable)
+        imeAvoidancePollsRemaining = 0
+        imeAvoidanceBottomInset = 0
+        restoreImeBaseStates()
+        applyImeOffset()
         window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN)
-        applyImeAvoidance(0)
+        imeAvoidanceRoot?.requestLayout()
+        window.decorView.requestLayout()
+        if (::streamView.isInitialized) {
+            streamView.requestLayout()
+            streamView.post {
+                if (::cursorServiceManager.isInitialized) {
+                    cursorServiceManager.syncCursorWithStream()
+                }
+            }
+        }
         hideSystemUi(50)
     }
 
@@ -634,7 +670,11 @@ class Game : Activity(), SurfaceHolder.Callback,
                 val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
                 val keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime()) || imeBottom > 0
                 LimeLog.info("IME avoidance: compatImeBottom=$imeBottom visible=$keyboardVisible")
-                applyImeAvoidance(if (keyboardVisible) imeBottom else 0)
+                if (!keyboardVisible && androidKeyboardVisible && imeAvoidanceBottomInset > 0) {
+                    exitAndroidKeyboardMode()
+                } else {
+                    applyImeAvoidance(if (keyboardVisible) imeBottom else 0)
+                }
             } else {
                 syncImeAdjustedLayout()
             }
@@ -651,8 +691,33 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun syncImeAdjustedLayout() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            if (imeAvoidanceBottomInset != 0) {
-                applyImeAvoidance(0)
+            val root = imeAvoidanceRoot
+            val rootHeight = root?.height ?: 0
+            if (!androidKeyboardVisible) {
+                if (rootHeight > 0) {
+                    imeRootBaseHeight = rootHeight
+                }
+                if (imeAvoidanceBottomInset != 0) {
+                    applyImeAvoidance(0)
+                } else if (::streamView.isInitialized) {
+                    streamView.post {
+                        if (::cursorServiceManager.isInitialized) {
+                            cursorServiceManager.syncCursorWithStream()
+                        }
+                    }
+                }
+                return
+            }
+
+            if (imeRootBaseHeight == 0 && rootHeight > 0) {
+                imeRootBaseHeight = rootHeight
+            }
+
+            val resizedInset = (imeRootBaseHeight - rootHeight).coerceAtLeast(0)
+            if (resizedInset > 0) {
+                applyImeAvoidance(resizedInset)
+            } else if (imeAvoidanceBottomInset > 0) {
+                exitAndroidKeyboardMode()
             } else if (::streamView.isInitialized) {
                 streamView.post {
                     if (::cursorServiceManager.isInitialized) {
@@ -667,12 +732,21 @@ class Game : Activity(), SurfaceHolder.Callback,
         if (imeAvoidanceBottomInset == bottomInset) return
         imeAvoidanceBottomInset = bottomInset
 
-        applyImeAvoidanceToView(findViewById(R.id.surfaceView), bottomInset)
-        applyImeAvoidanceToView(findViewById(R.id.backgroundTouchView), bottomInset)
-        applyImeAvoidanceToView(findViewById(R.id.cursorOverlay), bottomInset)
+        if (bottomInset > 0 || androidKeyboardVisible) {
+            captureImeBaseStates()
+            lockImeBaseSizes()
+        } else {
+            restoreImeBaseStates()
+        }
+        val maxOffset = getImeMaxOffset()
+        imeManualOffsetY = if (bottomInset > 0 && !imeUserPanned) {
+            -maxOffset
+        } else {
+            imeManualOffsetY.coerceIn(-maxOffset, 0f)
+        }
+        applyImeOffset()
 
         if (::streamView.isInitialized) {
-            streamView.requestLayout()
             streamView.post {
                 if (::cursorServiceManager.isInitialized) {
                     cursorServiceManager.syncCursorWithStream()
@@ -681,16 +755,129 @@ class Game : Activity(), SurfaceHolder.Callback,
         }
     }
 
-    private fun applyImeAvoidanceToView(view: View?, bottomInset: Int) {
-        val params = view?.layoutParams as? FrameLayout.LayoutParams ?: return
-        val key = view.id
-        val baseBottomMargin = imeAvoidanceBaseMargins.getOrPut(key) { params.bottomMargin }
-        val baseTranslationY = imeAvoidanceBaseTranslations.getOrPut(key) { view.translationY }
-        params.bottomMargin = baseBottomMargin + bottomInset
-        view.layoutParams = params
+    private fun applyImeOffset() {
+        applyImeOffsetToView(findViewById(R.id.surfaceView))
+        applyImeOffsetToView(findViewById(R.id.backgroundTouchView))
+        applyImeOffsetToView(findViewById(R.id.cursorOverlay))
+    }
 
-        val isCenteredVertically = (params.gravity and Gravity.VERTICAL_GRAVITY_MASK) == Gravity.CENTER_VERTICAL
-        view.translationY = baseTranslationY + if (isCenteredVertically) bottomInset / 2f else 0f
+    private fun captureImeBaseStates() {
+        captureImeBaseState(findViewById(R.id.surfaceView))
+        captureImeBaseState(findViewById(R.id.backgroundTouchView))
+        captureImeBaseState(findViewById(R.id.cursorOverlay))
+    }
+
+    private fun captureImeBaseState(view: View?) {
+        view ?: return
+        if (imeViewBaseStates.containsKey(view.id)) return
+        val params = view.layoutParams as? FrameLayout.LayoutParams ?: return
+        val width = view.width
+        val height = view.height
+        if (width > 0 && height > 0) {
+            imeViewBaseStates[view.id] = ImeViewBaseState(
+                FrameLayout.LayoutParams(params),
+                view.translationX,
+                view.translationY,
+                width,
+                height,
+                view.left,
+                view.top
+            )
+        }
+    }
+
+    private fun lockImeBaseSizes() {
+        lockImeBaseSize(findViewById(R.id.surfaceView))
+        lockImeBaseSize(findViewById(R.id.backgroundTouchView))
+        lockImeBaseSize(findViewById(R.id.cursorOverlay))
+    }
+
+    private fun lockImeBaseSize(view: View?) {
+        val params = view?.layoutParams as? FrameLayout.LayoutParams ?: return
+        val state = imeViewBaseStates[view.id] ?: return
+        if (params.width != state.width || params.height != state.height ||
+            params.leftMargin != state.left || params.topMargin != state.top ||
+            params.gravity != (Gravity.TOP or Gravity.LEFT)
+        ) {
+            params.width = state.width
+            params.height = state.height
+            params.gravity = Gravity.TOP or Gravity.LEFT
+            params.leftMargin = state.left
+            params.topMargin = state.top
+            params.rightMargin = 0
+            params.bottomMargin = 0
+            view.layoutParams = params
+        }
+    }
+
+    private fun restoreImeBaseStates() {
+        restoreImeBaseState(findViewById(R.id.surfaceView))
+        restoreImeBaseState(findViewById(R.id.backgroundTouchView))
+        restoreImeBaseState(findViewById(R.id.cursorOverlay))
+        imeViewBaseStates.clear()
+    }
+
+    private fun restoreImeBaseState(view: View?) {
+        view ?: return
+        val state = imeViewBaseStates[view.id] ?: return
+        view.layoutParams = FrameLayout.LayoutParams(state.layoutParams)
+        view.translationX = state.translationX
+        view.translationY = state.translationY
+    }
+
+    private fun applyImeOffsetToView(view: View?) {
+        view ?: return
+        val baseTranslationY = imeViewBaseStates[view.id]?.translationY ?: view.translationY
+        view.translationY = baseTranslationY + getImeTotalOffsetY()
+    }
+
+    private fun getImeTotalOffsetY(): Float {
+        return if (imeAvoidanceBottomInset > 0 || androidKeyboardVisible) {
+            imeManualOffsetY.coerceIn(-getImeMaxOffset(), 0f)
+        } else {
+            0f
+        }
+    }
+
+    private fun getImeMaxOffset(): Float {
+        val viewHeight = imeViewBaseStates[R.id.surfaceView]?.height
+            ?: if (::streamView.isInitialized && streamView.height > 0) streamView.height else 0
+        val rootHeight = imeAvoidanceRoot?.height ?: 0
+        return maxOf(0, viewHeight - rootHeight, imeAvoidanceBottomInset).toFloat()
+    }
+
+    private fun handleImePan(event: MotionEvent): Boolean {
+        if (!androidKeyboardVisible && imeAvoidanceBottomInset <= 0) return false
+        if (event.pointerCount != 1) return false
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                imePanLastY = event.rawY
+                imePanActive = true
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (!imePanActive) return true
+                val dy = event.rawY - imePanLastY
+                imePanLastY = event.rawY
+                if (dy != 0f) {
+                    imeUserPanned = true
+                }
+                imeManualOffsetY = (imeManualOffsetY + dy).coerceIn(-getImeMaxOffset(), 0f)
+                applyImeOffset()
+                streamView.post {
+                    if (::cursorServiceManager.isInitialized) {
+                        cursorServiceManager.syncCursorWithStream()
+                    }
+                }
+                return true
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                imePanActive = false
+                return true
+            }
+        }
+        return true
     }
 
     private fun pollImeAvoidance() {
@@ -1561,7 +1748,6 @@ class Game : Activity(), SurfaceHolder.Callback,
         val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         if (androidKeyboardVisible || imeAvoidanceBottomInset > 0) {
             inputManager.hideSoftInputFromWindow((keyboardAnchor ?: window.decorView).windowToken, 0)
-            applyImeAvoidance(0)
             clearKeyboardAnchorText()
             streamView.requestFocus()
             exitAndroidKeyboardMode()
@@ -1603,6 +1789,9 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(view: View, event: MotionEvent): Boolean {
+        if (handleImePan(event)) {
+            return true
+        }
         if (event.action == MotionEvent.ACTION_DOWN) {
             if (!prefConfig.syncTouchEventWithDisplay && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 view.requestUnbufferedDispatch(event)
@@ -2117,7 +2306,6 @@ class Game : Activity(), SurfaceHolder.Callback,
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (androidKeyboardVisible || imeAvoidanceBottomInset > 0) {
-            applyImeAvoidance(0)
             val inputManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
             inputManager.hideSoftInputFromWindow((keyboardAnchor ?: window.decorView).windowToken, 0)
             clearKeyboardAnchorText()

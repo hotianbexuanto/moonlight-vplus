@@ -79,7 +79,6 @@ import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.View
-import android.view.Gravity
 import android.view.View.OnGenericMotionListener
 import android.view.View.OnSystemUiVisibilityChangeListener
 import android.view.View.OnTouchListener
@@ -150,7 +149,8 @@ class Game : Activity(), SurfaceHolder.Callback,
         val width: Int,
         val height: Int,
         val left: Int,
-        val top: Int
+        val top: Int,
+        val bottom: Int
     )
     private val imeAvoidanceLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
         syncImeAdjustedLayout()
@@ -490,6 +490,9 @@ class Game : Activity(), SurfaceHolder.Callback,
 
         streamView.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) {
+                if (androidKeyboardVisible || imeAvoidanceBottomInset > 0) {
+                    applyImeOffset()
+                }
                 cursorServiceManager.syncCursorWithStream()
             }
         }
@@ -729,7 +732,8 @@ class Game : Activity(), SurfaceHolder.Callback,
     }
 
     private fun applyImeAvoidance(bottomInset: Int) {
-        if (imeAvoidanceBottomInset == bottomInset) return
+        val insetUnchanged = imeAvoidanceBottomInset == bottomInset
+        if (insetUnchanged && !androidKeyboardVisible) return
         imeAvoidanceBottomInset = bottomInset
 
         if (bottomInset > 0 || androidKeyboardVisible) {
@@ -738,11 +742,11 @@ class Game : Activity(), SurfaceHolder.Callback,
         } else {
             restoreImeBaseStates()
         }
-        val maxOffset = getImeMaxOffset()
+        val offsetRange = getImeOffsetRange()
         imeManualOffsetY = if (bottomInset > 0 && !imeUserPanned) {
-            -maxOffset
+            offsetRange.start
         } else {
-            imeManualOffsetY.coerceIn(-maxOffset, 0f)
+            imeManualOffsetY.coerceIn(offsetRange.start, offsetRange.endInclusive)
         }
         applyImeOffset()
 
@@ -781,7 +785,8 @@ class Game : Activity(), SurfaceHolder.Callback,
                 width,
                 height,
                 view.left,
-                view.top
+                view.top,
+                view.bottom
             )
         }
     }
@@ -795,17 +800,9 @@ class Game : Activity(), SurfaceHolder.Callback,
     private fun lockImeBaseSize(view: View?) {
         val params = view?.layoutParams as? FrameLayout.LayoutParams ?: return
         val state = imeViewBaseStates[view.id] ?: return
-        if (params.width != state.width || params.height != state.height ||
-            params.leftMargin != state.left || params.topMargin != state.top ||
-            params.gravity != (Gravity.TOP or Gravity.LEFT)
-        ) {
+        if (params.width != state.width || params.height != state.height) {
             params.width = state.width
             params.height = state.height
-            params.gravity = Gravity.TOP or Gravity.LEFT
-            params.leftMargin = state.left
-            params.topMargin = state.top
-            params.rightMargin = 0
-            params.bottomMargin = 0
             view.layoutParams = params
         }
     }
@@ -827,23 +824,36 @@ class Game : Activity(), SurfaceHolder.Callback,
 
     private fun applyImeOffsetToView(view: View?) {
         view ?: return
-        val baseTranslationY = imeViewBaseStates[view.id]?.translationY ?: view.translationY
-        view.translationY = baseTranslationY + getImeTotalOffsetY()
+        val state = imeViewBaseStates[view.id]
+        if (state == null) return
+        view.translationX = state.translationX + state.left - view.left
+        view.translationY = state.translationY + state.top - view.top + getImeTotalOffsetY()
     }
 
     private fun getImeTotalOffsetY(): Float {
         return if (imeAvoidanceBottomInset > 0 || androidKeyboardVisible) {
-            imeManualOffsetY.coerceIn(-getImeMaxOffset(), 0f)
+            val offsetRange = getImeOffsetRange()
+            imeManualOffsetY.coerceIn(offsetRange.start, offsetRange.endInclusive)
         } else {
             0f
         }
     }
 
-    private fun getImeMaxOffset(): Float {
-        val viewHeight = imeViewBaseStates[R.id.surfaceView]?.height
+    private fun getImeOffsetRange(): ClosedFloatingPointRange<Float> {
+        val state = imeViewBaseStates[R.id.surfaceView]
+        val viewHeight = state?.height
             ?: if (::streamView.isInitialized && streamView.height > 0) streamView.height else 0
         val rootHeight = imeAvoidanceRoot?.height ?: 0
-        return maxOf(0, viewHeight - rootHeight, imeAvoidanceBottomInset).toFloat()
+        val visibleHeight = if (rootHeight > 0) rootHeight else viewHeight
+        val noBlankUp = if (state != null && rootHeight > 0) {
+            (state.bottom - rootHeight).coerceAtLeast(0)
+        } else {
+            maxOf(0, viewHeight - rootHeight, imeAvoidanceBottomInset)
+        }
+        val manualPan = maxOf(0, viewHeight - visibleHeight, imeAvoidanceBottomInset)
+        val maxUp = maxOf(noBlankUp, manualPan)
+        val maxDown = maxOf(state?.top?.coerceAtLeast(0) ?: 0, manualPan)
+        return -maxUp.toFloat()..maxDown.toFloat()
     }
 
     private fun handleImePan(event: MotionEvent): Boolean {
@@ -863,7 +873,8 @@ class Game : Activity(), SurfaceHolder.Callback,
                 if (dy != 0f) {
                     imeUserPanned = true
                 }
-                imeManualOffsetY = (imeManualOffsetY + dy).coerceIn(-getImeMaxOffset(), 0f)
+                val offsetRange = getImeOffsetRange()
+                imeManualOffsetY = (imeManualOffsetY + dy).coerceIn(offsetRange.start, offsetRange.endInclusive)
                 applyImeOffset()
                 streamView.post {
                     if (::cursorServiceManager.isInitialized) {
